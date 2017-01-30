@@ -17,6 +17,7 @@ function calendarHeatmap() {
   var tooltipEnabled = true;
   var tooltipUnit = 'contribution';
   var legendEnabled = true;
+  var leftAlign = false;
   var onClick = null;
   var weekStart = 0; //0 for Sunday, 1 for Monday
 
@@ -63,12 +64,29 @@ function calendarHeatmap() {
     return chart;
   };
 
+  chart.startDate = function (value) {
+    if (!arguments.length) { return yearAgo; }
+    yearAgo = value;
+    return chart;
+  }
+
+  chart.endDate = function (value) {
+    if (!arguments.length) { return now; }
+    now = value;
+    return chart;
+  }
+
+  chart.leftAlignLegend = function(value) {
+    if (!arguments.length) { return leftAlign; }
+    leftAlign = value;
+    return chart;
+  }
   function chart() {
 
     d3.select(chart.selector()).selectAll('svg.calendar-heatmap').remove(); // remove the existing chart, if it exists
 
-    var dateRange = d3.time.days(yearAgo, now); // generates an array of date objects within the specified range
-    var monthRange = d3.time.months(moment(yearAgo).startOf('month').toDate(), now); // it ignores the first month if the 1st date is after the start of the month
+    var dateRange = d3.time.days(chart.startDate(), chart.endDate()); // generates an array of date objects within the specified range
+    var monthRange = d3.time.months(moment(chart.startDate()).startOf('month').toDate(), chart.endDate()); // it ignores the first month if the 1st date is after the start of the month
     var firstDate = moment(dateRange[0]);
     var max = d3.max(chart.data(), function (d) { return d.count; }); // max data value
 
@@ -83,6 +101,10 @@ function calendarHeatmap() {
     drawChart();
 
     function drawChart() {
+      // The width is a function of the number weeks to be shown
+      var momentStart = moment(chart.startDate);
+      var momentEnd = moment(chart.endDate);
+      var numOfWeeks = momentEnd.subtract(momentStart)
       var svg = d3.select(chart.selector())
         .append('svg')
         .attr('width', width)
@@ -223,7 +245,11 @@ function calendarHeatmap() {
     }
 
     var daysOfChart = chart.data().map(function (day) {
-      return day.date.toDateString();
+      if (day.date instanceof Date) {
+        return day.date.toDateString();
+      } else {
+        return (new Date(day.date).toDateString());
+      }
     });
 
     dayRects.filter(function (d) {
